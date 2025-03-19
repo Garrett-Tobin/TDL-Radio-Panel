@@ -1,24 +1,9 @@
-
-a
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import RPi.GPIO as GPIO
-GPIO.setup(18, GPIO.out)
-print("Hello,!")
+import tkinter
+import time
+
+# Below prints out current version of RPi.GPIO
+# gpio_version = GPIO.VERSION 
+# print(gpio_version)
+
+tkinter._test();
