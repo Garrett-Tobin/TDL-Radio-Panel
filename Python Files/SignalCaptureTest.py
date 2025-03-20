@@ -1,21 +1,32 @@
-import RPi.GPIO
-imprto time
+import lgpio
+import time
 
-GPIO.setmode(GPIO.BOARD)
+# Define the GPIO pin numbers
+OUTPUT_PIN = 17
 
-resistorPin = 7
+# Set up the GPIO interface
+chip = lgpio.gpiochip_open(0)  # Open the first GPIO chip
 
-while True:
-	GPIO.setup(resistorPin, GPIO.OUT)
-	GPIO.output(resistorPin, GPIO.LOW)
-	time.sleep(0.1)
+# Set the pins as output and input
+lgpio.gpio_claim_output(chip, OUTPUT_PIN)
 
-	GPIO.setup(resistorPin, GPIO.IN)
-	currentTime = time.time()
-	diff = 0;
+COUNTER = 0
+# Blink the LED 10 times
+try:
+    while (COUNTER < 10):
+        # Turn the LED on (set the output pin to HIGH)
+        lgpio.gpio_write(chip, OUTPUT_PIN, 1)
+        time.sleep(1)  # Wait for 1 second
 
-	while(GPIO.input(resistorPin == GPIO.LOW):
-		diff = time.time() - currentTime
+        # Turn the LED off (set the output pin to LOW)
+        lgpio.gpio_write(chip, OUTPUT_PIN, 0)
+        time.sleep(1)  # Wait for 1 second
 
-	print(diff * 1000)
-	time.sleep(1)
+	# Increment Counter By 1
+        COUNTER += 1
+except KeyboardInterrupt:
+    pass  # Handle a keyboard interrupt (Ctrl+C) to stop the program
+
+# Cleanup
+lgpio.gpiochip_close(chip)
+
