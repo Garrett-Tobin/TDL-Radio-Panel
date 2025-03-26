@@ -21,3 +21,7 @@ def setupPins(chip):
     
     print("TESTING setupPins")
 
+def createTDLWindow(windowTitle):
+    windowTitle.title("TDL-Radio-Panel") # Set Window Title
+    windowTitle.geometry('600x600') # Set Window Size
+
