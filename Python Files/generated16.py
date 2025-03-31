@@ -44,7 +44,7 @@ def readADC():
         adc_data = (adc_data << 1) | bit  # Shift left and add new bit
         time.sleep(0.00001)  # Simulate clock pulse
 
-    address = 0b10101010  # Example 8-bit address (modify if needed)
+    address = 0b00001000  # 8-bit address
     full_data = (address << 16) | adc_data  # Combine 8-bit address + 16-bit ADC data
     captured_data.append(full_data)  # Store 24-bit signal
 
