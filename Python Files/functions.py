@@ -26,6 +26,12 @@ def grabDelayTime(label, spinBox):
     label.config(text=f"Current Delay Time: {time}") # Update the Label
     return time
 
+def grabCaptureTime(label, spinBox):
+    # Grab the Delay Time from the SpinBox
+    time = spinBox.get() # Grab the spinBox Value
+    label.config(text=f"Current Capture Time: {time}") # Update the Label
+    return time
+
 def createTDLWindow(windowTitle):
     windowTitle.title("TDL-Radio-Panel") # Set Window Title
     windowTitle.geometry('600x600') # Set Window Size
