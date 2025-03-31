@@ -40,6 +40,10 @@ try:
     setDelayTime_btn = tk.Button(TDLwindow, text="Set Desired Delay Time", font=("Times New Roman", 16), command=handleDelayButton)
     setDelayTime_btn.pack(pady=20)
 
+    # Button to start Delay
+    startDelay_btn = tk.Button(TDLwindow, text="Start Capture and Delay", font=("Times New Roman", 16), command=startDelay)
+    startDelay_btn.pack(pady=20)
+    
     # Label to Display Current Delay Time
     delayDisplay_lbl = tk.Label(TDLwindow, text="Current Delay Time: 0", font=("Times New Roman", 16))
     delayDisplay_lbl.pack(pady=3)
@@ -61,14 +65,28 @@ try:
         try:
             TDLwindow.update_idletasks()  # Update Tkinter tasks
             TDLwindow.update()  # Refresh the window
-            
-            # Optional: You can read GPIO inputs and update the UI here
-            # Example: if a GPIO pin is high, turn the indicator green
-            if lgpio.gpio_read(chip, PinNumbers.SOME_INPUT_PIN):  # Replace with actual pin
-                indicator_lbl.config(text="On", bg="green")
-            else:
-                indicator_lbl.config(text="Off", bg="red")
 
+            # Update TRI-STATE on oscillator (not sure about this one)
+            
+            # Update RST Pin if need to Reset the ADC (Set to Active Low to reset pin)
+
+            # Send register instructions to ADC using SDI pin (Not sure what this entails)
+
+            # Indicate to ADC to start converting using CONVST (Done after interface button is pressed)
+
+            # Read RVS pin (When high signal is being read and when Low samples are being put together)
+            # Have a while loop that runs until samples are ready to be read
+            
+            # When samples are prepared read them and capture them from SDO-O
+
+            # Delay the program 
+
+            # Update RESET to reset DAC if needed
+
+            # Send SYNC signal to prepare DAC for conversion to analog
+
+            # Send captured digital signal to SDIN
+            
             time.sleep(0.1)  # Prevents excessive CPU usage
 
         except tk.TclError:
