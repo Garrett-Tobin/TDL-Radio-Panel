@@ -132,9 +132,10 @@ def mainLoop():
                 # Initialize ADC and DAC settings
                 lgpio.gpio_write(chip, PinNumbers.TRI_STATE, 1)  # Enable oscillator
                 lgpio.gpio_write(chip, PinNumbers.RST, 0)  # Reset ADC
+                lgpio.gpio_write(chip, PinNumbers.RESET, 0) # Assumption that 0 Resets DAC (Need to Check this)
                 initial_state = False
 
-            time.sleep(0.1)  # Reduce CPU usage
+            time.sleep(0.01)  # Reduce CPU usage
 
         except tk.TclError:
             print("Program closed. Cleaning up...")
