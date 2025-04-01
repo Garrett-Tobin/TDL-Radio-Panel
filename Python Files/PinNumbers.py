@@ -1,17 +1,17 @@
 # GPIO Pin Numbers
 
 # Input Pins
-RVS = 11 #ADC
-ALRM = 13 #ADC
-SDO_O = 15 # ADC
+RVS = 17 #ADC
+ALRM = 27 #ADC
+SDO_O = 22 # ADC
 
 
 # Output Pins
-CONVST = 16 # ADC
-SDI = 18 # ADC
-RST = 22 # ADC
-SDIN = 36 # DAC 
-SYNC = 37 # DAC
-RESET = 31 # DAC
-TRI_STATE = 29 # Oscillator
+CONVST = 23 # ADC
+SDI = 24 # ADC
+RST = 25 # ADC
+SDIN = 16 # DAC 
+SYNC = 26 # DAC
+RESET = 6 # DAC
+TRI_STATE = 5 # Oscillator
 

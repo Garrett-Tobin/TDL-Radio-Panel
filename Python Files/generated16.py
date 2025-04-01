@@ -36,24 +36,33 @@ def startConversion():
     while lgpio.gpio_read(chip, PinNumbers.RVS) == 1:
         time.sleep(0.00001)
 
+def pulseSYNC():
+    """Pulse the SYNC pin to prepare the DAC"""
+    lgpio.gpio_write(chip, PinNumbers.SYNC, 1)
+    time.sleep(0.00001) # Small delay to allow DAC to start
+    lgpio.gpio_write(chip, PinNumbers.SYNC, 0) 
+
 def readADC():
     """Reads the first 16-bit signal from ADC and appends 8-bit address"""
-    adc_data = 0
-    for i in range(16):  # Read only first 16 bits
-        bit = lgpio.gpio_read(chip, PinNumbers.SDO_O)
-        adc_data = (adc_data << 1) | bit  # Shift left and add new bit
-        time.sleep(0.00001)  # Simulate clock pulse
+    start_time = time.time()
+    while time.time() - start_time < captureTime:
+        startConversion()
+        adc_data = 0
+        for i in range(16):  # Read only first 16 bits
+            bit = lgpio.gpio_read(chip, PinNumbers.SDO_O)
+            adc_data = (adc_data << 1) | bit  # Shift left and add new bit
+            time.sleep(0.00001)  # Simulate clock pulse
 
-    address = 0b00001000  # 8-bit address
-    full_data = (address << 16) | adc_data  # Combine 8-bit address + 16-bit ADC data
-    captured_data.append(full_data)  # Store 24-bit signal
+        address = 0b00001000  # 8-bit address
+        full_data = (address << 16) | adc_data  # Combine 8-bit address + 16-bit ADC data
+        captured_data.append(full_data)  # Store 24-bit signal
 
-    print(f"Captured 16-bit ADC: {bin(adc_data)}, Full 24-bit Data: {bin(full_data)}")
+        print(f"Captured 16-bit ADC: {bin(adc_data)}, Full 24-bit Data: {bin(full_data)}")
 
-    # Ignore the remaining 16 bits from ADC output
-    for _ in range(16):
-        _ = lgpio.gpio_read(chip, PinNumbers.SDO_O)
-        time.sleep(0.00001)  # Continue clocking out unused bits
+        # Ignore the remaining 16 bits from ADC output
+        for _ in range(16):
+            _ = lgpio.gpio_read(chip, PinNumbers.SDO_O)
+            time.sleep(0.00001)  # Continue clocking out unused bits
 
 def outputSignal():
     """Outputs the stored 24-bit signal to DAC via SDO_O"""
@@ -61,17 +70,18 @@ def outputSignal():
         print("No data to output!")
         return
 
-    signal = captured_data.pop(0)  # Retrieve the oldest stored signal
-    for i in range(24):  # Send 24-bit signal bit by bit
-        bit = (signal >> (23 - i)) & 1  # Extract MSB first
-        lgpio.gpio_write(chip, PinNumbers.SDIN, bit)
-        time.sleep(0.00001)  # Simulate clock pulse
+    for signal in captured_data:
+        signal = captured_data.pop(0)  # Retrieve the oldest stored signal
+        pulseSYNC()
+        for i in range(24):  # Send 24-bit signal bit by bit
+            bit = (signal >> (23 - i)) & 1  # Extract MSB first
+            lgpio.gpio_write(chip, PinNumbers.SDIN, bit)
+            time.sleep(0.00001)  # Simulate clock pulse
 
-    print(f"Outputted 24-bit signal: {bin(signal)}")
+        print(f"Outputted 24-bit signal: {bin(signal)}")
 
 def startDelay():
     """Handles ADC conversion, delay, and DAC output"""
-    startConversion()  # Start ADC conversion
     readADC()  # Read first 16-bits from ADC and store it
 
     if delayTime > 0:
