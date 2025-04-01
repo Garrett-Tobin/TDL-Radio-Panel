@@ -64,7 +64,7 @@ def outputSignal():
     signal = captured_data.pop(0)  # Retrieve the oldest stored signal
     for i in range(24):  # Send 24-bit signal bit by bit
         bit = (signal >> (23 - i)) & 1  # Extract MSB first
-        lgpio.gpio_write(chip, PinNumbers.SDO_O, bit)
+        lgpio.gpio_write(chip, PinNumbers.SDIN, bit)
         time.sleep(0.00001)  # Simulate clock pulse
 
     print(f"Outputted 24-bit signal: {bin(signal)}")
@@ -78,6 +78,7 @@ def startDelay():
         time.sleep(delayTime)
         print(f"Delayed for {delayTime}s")
 
+    # Maybe need to add SYNC Control here to prepare the DAC
     outputSignal()  # Output stored 24-bit signal to DAC
     print("END DELAY")
 
