@@ -7,17 +7,17 @@ import PinNumbers
 def setupPins(chip):
     # Setup Outputs
     lgpio.gpio_claim_output(chip, PinNumbers.CONVST)
-    lgpio.gpio_claim_output(chip, PinNumbers.SDI)
-    lgpio.gpio_claim_output(chip, PinNumbers.RST)
+    # lgpio.gpio_claim_output(chip, PinNumbers.SDI)
+    # lgpio.gpio_claim_output(chip, PinNumbers.RST)
     lgpio.gpio_claim_output(chip, PinNumbers.SDIN)
     lgpio.gpio_claim_output(chip, PinNumbers.SYNC)
-    lgpio.gpio_claim_output(chip, PinNumbers.RESET)
+    # lgpio.gpio_claim_output(chip, PinNumbers.RESET)
     lgpio.gpio_claim_output(chip, PinNumbers.TRI_STATE)
     
     # Setup Inputs
     lgpio.gpio_claim_input(chip, PinNumbers.RVS)
-    lgpio.gpio_claim_input(chip, PinNumbers.ALRM)
-    lgpio.gpio_claim_input(chip, PinNumbers.SDO_O)
+    # lgpio.gpio_claim_input(chip, PinNumbers.ALRM)
+    # lgpio.gpio_claim_input(chip, PinNumbers.SDO_O)
     # End of setupPins(chip)
 
 def grabDelayTime(label, spinBox):

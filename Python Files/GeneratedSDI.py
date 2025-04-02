@@ -8,11 +8,12 @@ import lgpio
 # Global Variables
 initial_state = True
 SPI_BUS = 0  # SPI bus number
-SPI_DEVICE_ADC = 0  # ADC on CE0
-SPI_DEVICE_DAC = 1  # DAC on CE1
+SPI_DEVICE_ADC = 0  # ADC on CE0 (GPIO 8) originally GPIO 22
+SPI_DEVICE_DAC = 1  # DAC on CE1 (GPIO 7) originally GPIO 16
 captureTime = 0
 delayTime = 0
 captured_data = []  # Store 32-bit signals
+CYCLE = 1/(50e6)
 
 # GPIO Setup
 chip = lgpio.gpiochip_open(0)  # Open GPIO chip for pin control
@@ -28,10 +29,7 @@ spi_adc.mode = 0b11  # Mode for ADS8681W
 spi_dac.mode = 0b00  # Mode for DAC82001
 
 # Initialize Pins for ADC (ADS8681W) and DAC (DAC82001)
-lgpio.gpio_set_mode(chip, PinNumbers.CONVST, lgpio.OUTPUT)  # Set CONVST pin as output
-lgpio.gpio_set_mode(chip, PinNumbers.RVS, lgpio.INPUT)  # Set RVS pin as input
-lgpio.gpio_set_mode(chip, PinNumbers.SYNC, lgpio.OUTPUT)  # Set SYNC pin as output
-lgpio.gpio_set_mode(chip, PinNumbers.SDIN, lgpio.OUTPUT)  # Set SDIN pin as output
+functions.setupPins(chip)
 
 # GUI Handlers
 def handleCaptureButton():
@@ -46,18 +44,18 @@ def startConversion():
     """Activates CONVST for ADC and waits for RVS pin to signal ready data"""
     # Activate CONVST to start ADC conversion
     lgpio.gpio_write(chip, PinNumbers.CONVST, 1)
-    time.sleep(0.00001)  # Small delay to allow ADC to start conversion
+    time.sleep(CYCLE)  # Small delay to allow ADC to start conversion
     lgpio.gpio_write(chip, PinNumbers.CONVST, 0)  # Deactivate CONVST to finish start
 
     # Wait for RVS pin to go low (indicating ADC data is ready)
     while lgpio.gpio_read(chip, PinNumbers.RVS) == 1:
-        time.sleep(0.00001)  # Small delay before checking again
+        time.sleep(CYCLE)  # Small delay before checking again
     print("ADC data is ready")
 
 def pulseSYNC():
     """Pulses the SYNC pin to prepare DAC for receiving data"""
     lgpio.gpio_write(chip, PinNumbers.SYNC, 1)  # Set SYNC high
-    time.sleep(0.00001)  # Small delay
+    time.sleep(CYCLE)  # Small delay
     lgpio.gpio_write(chip, PinNumbers.SYNC, 0)  # Set SYNC low
 
 def readADC():
