@@ -8,8 +8,8 @@ import lgpio
 # Global Variables
 initial_state = True
 SPI_BUS = 0  # SPI bus number
-SPI_DEVICE_ADC = 0  # ADC on CE0 (GPIO 8) originally GPIO 22
-SPI_DEVICE_DAC = 1  # DAC on CE1 (GPIO 7) originally GPIO 16
+SPI_DEVICE_ADC = 0  # ADC on CE0 (GPIO 9) originally GPIO 22
+SPI_DEVICE_DAC = 1  # DAC on CE1 (GPIO 10) originally GPIO 16
 captureTime = 0
 delayTime = 0
 captured_data = []  # Store 32-bit signals
@@ -25,7 +25,7 @@ spi_adc.open(SPI_BUS, SPI_DEVICE_ADC)
 spi_dac.open(SPI_BUS, SPI_DEVICE_DAC)
 spi_adc.max_speed_hz = 50000000  # 50 MHz per ADS8681W datasheet
 spi_dac.max_speed_hz = 50000000  # 50 MHz per DAC82001 datasheet
-spi_adc.mode = 0b11  # Mode for ADS8681W
+spi_adc.mode = 0b00  # Mode for ADS8681W
 spi_dac.mode = 0b00  # Mode for DAC82001
 
 # Initialize Pins for ADC (ADS8681W) and DAC (DAC82001)
