@@ -47,8 +47,14 @@ def readADC():
     """Reads the first 16-bit signal from ADC and appends 8-bit address"""
     start_time = time.time()
     while time.time() - start_time < captureTime:
-        startConversion()
         adc_data = 0
+        # startConversion()
+        lgpio.gpio_write(chip, PinNumbers.CONVST, 1)  # Start conversion
+        
+        # Wait for RVS to go LOW (indicates ADC data is ready)
+        while lgpio.gpio_read(chip, PinNumbers.RVS) == 1:
+            time.sleep(CYCLE)
+            
         for i in range(16):  # Read only first 16 bits
             bit = lgpio.gpio_read(chip, PinNumbers.SDO_O)
             adc_data = (adc_data << 1) | bit  # Shift left and add new bit
@@ -56,8 +62,8 @@ def readADC():
 
         address = 0b00001000  # 8-bit address
         full_data = (address << 16) | adc_data  # Combine 8-bit address + 16-bit ADC data
-        test_data = 0b000010001010101010101010 # Used for Testing
-        captured_data.append(test_data)  # Store 24-bit signal
+        # test_data = 0b000010001010101010101010 # Used for Testing
+        captured_data.append(full_data)  # Store 24-bit signal
 
         print(f"Captured 16-bit ADC: {bin(adc_data)}, Full 24-bit Data: {bin(full_data)}")
 
@@ -65,7 +71,7 @@ def readADC():
         for _ in range(16):
             _ = lgpio.gpio_read(chip, PinNumbers.SDO_O)
             time.sleep(CYCLE)  # Continue clocking out unused bits
-
+        lgpio.gpio_write(chip, PinNumbers.CONVST, 0)  # Return to LOW
 def outputSignal():
     """Outputs the stored 24-bit signal to DAC via SDO_O"""
     if not captured_data:
@@ -83,6 +89,7 @@ def outputSignal():
         print(f"Outputted 24-bit signal: {bin(signal)}")
 
 def startDelay():
+    starttime = time.time()
     """Handles ADC conversion, delay, and DAC output"""
     readADC()  # Read first 16-bits from ADC and store it
 
@@ -91,7 +98,10 @@ def startDelay():
         print(f"Delayed for {delayTime}s")
 
     # Maybe need to add SYNC Control here to prepare the DAC
+    starting = time.time() - starttime
     outputSignal()  # Output stored 24-bit signal to DAC
+    ending = time.time() - starttime
+    print(f"{starting:.3f} {ending:.3f}")
     print("END DELAY")
 
 # ----------------------- GUI Setup -----------------------

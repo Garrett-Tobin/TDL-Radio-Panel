@@ -7,10 +7,10 @@ SDO_O = 22 # ADC
 
 
 # Output Pins
-CONVST = 23 # ADC changed from 23 to 16
+CONVST = 23 # ADC
 SDI = 24 # ADC
 RST = 25 # ADC
-SDIN = 16 # DAC chnaged temporarily from 16 to 23
+SDIN = 16 # DAC 
 SYNC = 26 # DAC
 RESET = 6 # DAC
 TRI_STATE = 5 # Oscillator
