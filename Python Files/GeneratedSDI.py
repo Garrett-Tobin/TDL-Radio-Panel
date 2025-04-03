@@ -19,6 +19,7 @@ CYCLE = 1/(50e6)
 # GPIO Setup
 chip = lgpio.gpiochip_open(0)  # Open GPIO chip for pin control
 
+reset_devices()
 # Initialize SPI
 spi_adc = spidev.SpiDev()
 spi_dac = spidev.SpiDev()
@@ -33,6 +34,22 @@ spi_dac.mode = 0b00  # Mode for DAC82001
 functions.setupPins(chip)
 
 # GUI Handlers
+def reset_devices():
+    """Resets the ADC (ADS8681W) and DAC (DAC82001) using RST and RESET pins"""
+    print("Resetting ADC (ADS8681W) and DAC (DAC82001)...")
+
+    # Set both reset pins LOW
+    lgpio.gpio_write(chip, PinNumbers.RST, 0)  # Reset ADC
+    lgpio.gpio_write(chip, PinNumbers.RESET, 0)  # Reset DAC
+    time.sleep(0.01)  # 10ms delay (ensure proper reset)
+
+    # Set both reset pins HIGH
+    lgpio.gpio_write(chip, PinNumbers.RST, 1)
+    lgpio.gpio_write(chip, PinNumbers.RESET, 1)
+    time.sleep(0.01)  # Wait after reset
+
+    print("Reset complete. Initializing SPI...")
+
 def handleCaptureButton():
     global captureTime
     captureTime = int(functions.grabCaptureTime(captureDisplay_lbl, captureTime_SpinBox))
