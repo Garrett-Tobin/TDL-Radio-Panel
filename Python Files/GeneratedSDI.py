@@ -65,7 +65,9 @@ def readADC():
     with open(output_filename, "w") as file: # Open output file in write mode
         while time.time() - start_time < captureTime:
             startConversion()  # Start ADC conversion
+            
             adc_data = spi_adc.xfer2([0x00, 0x00, 0x00, 0x00])  # 4 bytes (32 bits)
+            
             result = (adc_data[0] << 24) | (adc_data[1] << 16) | (adc_data[2] << 8) | adc_data[3]
             captured_data.append(result)  # Store captured data
             
@@ -81,11 +83,15 @@ def outputSignal():
     with open(output_filename, "a") as file:
         for signal in captured_data:
             captured_data.pop(0)  # Retrieve and remove the oldest stored signal
-            data_bytes = [(signal >> 24) & 0xFF, (signal >> 16) & 0xFF, (signal >> 8) & 0xFF, signal & 0xFF]
+            
+            dac_value = (signal >> 16) & 0xFFFF # Extract the 16 most signifcant bits (Data Bits)
+            
+            data_bytes = [0x08, (dac_value >> 8) & 0xFF, dac_value & 0xFF]
+            
             pulseSYNC()  # Pulse the SYNC pin to prepare the DAC
             spi_dac.xfer2(data_bytes)  # Send 4 bytes to the DAC
             
-            file.write(f"Outputted 32-bit signal: {bin(signal)}\n")
+            file.write(f"Outputted to DAC82001: {bin(dac_value)}\n")
             # print(f"Outputted 32-bit signal: {bin(signal)}")
 
 def startConversionAndDelay():
