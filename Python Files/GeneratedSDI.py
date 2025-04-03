@@ -96,6 +96,7 @@ def outputSignal():
 
 def startConversionAndDelay():
     """Handles ADC conversion, delay, and DAC output"""
+    print(f"Starting Delay")
     readADC()  # Read from ADC
     if delayTime > 0:
         time.sleep(delayTime)  # Add delay if set

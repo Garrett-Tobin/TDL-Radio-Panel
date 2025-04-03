@@ -18,7 +18,7 @@ chip = lgpio.gpiochip_open(0)  # Open GPIO chip
 spi_dac = spidev.SpiDev()
 spi_dac.open(SPI_BUS, SPI_DEVICE_DAC)
 spi_dac.max_speed_hz = 50000000
-spi_dac.mode = 0b00  # Mode for DAC82001
+spi_dac.mode = 0b10  # Mode for DAC82001
 
 # Generate Waveform Data
 def generate_waveform(samples=100):
