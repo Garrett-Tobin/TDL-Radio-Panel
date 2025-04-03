@@ -67,7 +67,7 @@ def startConversion():
     lgpio.gpio_write(chip, PinNumbers.CONVST, 0)  # Deactivate CONVST to finish start
 
     # Wait for RVS pin to go low (indicating ADC data is ready)
-    while lgpio.gpio_read(chip, PinNumbers.RVS) == 1:
+    while lgpio.gpio_read(chip, PinNumbers.RVS) == 0:
         time.sleep(CYCLE)  # Small delay before checking again
     # print("ADC data is ready")
 
@@ -105,12 +105,12 @@ def outputSignal():
             dac_value = (signal >> 16) & 0xFFFF # Extract the 16 most signifcant bits (Data Bits)
             
             data_bytes = [0x08, (dac_value >> 8) & 0xFF, dac_value & 0xFF]
+            #file.write(f"Outputted to DAC82001: {data_bytes}\n")
             
             pulseSYNC()  # Pulse the SYNC pin to prepare the DAC
             spi_dac.xfer2(data_bytes)  # Send 4 bytes to the DAC
             
-            file.write(f"Outputted to DAC82001: {bin(dac_value)}\n")
-            # print(f"Outputted 32-bit signal: {bin(signal)}")
+            file.write(f"Outputted to DAC82001: {dac_value}\n")
 
 def startConversionAndDelay():
     """Handles ADC conversion, delay, and DAC output"""
