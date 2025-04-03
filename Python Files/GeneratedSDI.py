@@ -9,8 +9,8 @@ import lgpio
 initial_state = True
 output_filename = "captured_output.txt"
 SPI_BUS = 0  # SPI bus number
-SPI_DEVICE_ADC = 0  # ADC on CE0 (GPIO 9) originally GPIO 22
-SPI_DEVICE_DAC = 1  # DAC on CE1 (GPIO 10) originally GPIO 16
+SPI_DEVICE_ADC = 0  # ADC on CE0 (GPIO 9 (MISO)) originally GPIO 22
+SPI_DEVICE_DAC = 1  # DAC on CE1 (GPIO 10 (MOSI)) originally GPIO 16
 captureTime = 0
 delayTime = 0
 captured_data = []  # Store 32-bit signals
