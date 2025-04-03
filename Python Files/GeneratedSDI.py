@@ -7,6 +7,7 @@ import lgpio
 
 # Global Variables
 initial_state = True
+output_filename = "captured_output.txt"
 SPI_BUS = 0  # SPI bus number
 SPI_DEVICE_ADC = 0  # ADC on CE0 (GPIO 9) originally GPIO 22
 SPI_DEVICE_DAC = 1  # DAC on CE1 (GPIO 10) originally GPIO 16
@@ -50,7 +51,7 @@ def startConversion():
     # Wait for RVS pin to go low (indicating ADC data is ready)
     while lgpio.gpio_read(chip, PinNumbers.RVS) == 1:
         time.sleep(CYCLE)  # Small delay before checking again
-    print("ADC data is ready")
+    # print("ADC data is ready")
 
 def pulseSYNC():
     """Pulses the SYNC pin to prepare DAC for receiving data"""
@@ -61,25 +62,31 @@ def pulseSYNC():
 def readADC():
     """Reads a 32-bit signal from the ADC (ADS8681W)"""
     start_time = time.time()
-    while time.time() - start_time < captureTime:
-        startConversion()  # Start ADC conversion
-        adc_data = spi_adc.xfer2([0x00, 0x00, 0x00, 0x00])  # 4 bytes (32 bits)
-        result = (adc_data[0] << 24) | (adc_data[1] << 16) | (adc_data[2] << 8) | adc_data[3]
-        captured_data.append(result)  # Store captured data
-        print(f"Captured 32-bit ADC: {bin(result)}")
+    with open(output_filename, "w") as file: # Open output file in write mode
+        while time.time() - start_time < captureTime:
+            startConversion()  # Start ADC conversion
+            adc_data = spi_adc.xfer2([0x00, 0x00, 0x00, 0x00])  # 4 bytes (32 bits)
+            result = (adc_data[0] << 24) | (adc_data[1] << 16) | (adc_data[2] << 8) | adc_data[3]
+            captured_data.append(result)  # Store captured data
+            
+            file.write(f"Captured 32-bit ADC: {bin(result)}\n")
+            # print(f"Captured 32-bit ADC: {bin(result)}")
 
 def outputSignal():
     """Outputs the stored 32-bit signal to DAC (DAC82001)"""
     if not captured_data:
         print("No data to output!")
         return
-
-    for signal in captured_data:
-        captured_data.pop(0)  # Retrieve and remove the oldest stored signal
-        data_bytes = [(signal >> 24) & 0xFF, (signal >> 16) & 0xFF, (signal >> 8) & 0xFF, signal & 0xFF]
-        pulseSYNC()  # Pulse the SYNC pin to prepare the DAC
-        spi_dac.xfer2(data_bytes)  # Send 4 bytes to the DAC
-        print(f"Outputted 32-bit signal: {bin(signal)}")
+    
+    with open(output_filename, "a") as file:
+        for signal in captured_data:
+            captured_data.pop(0)  # Retrieve and remove the oldest stored signal
+            data_bytes = [(signal >> 24) & 0xFF, (signal >> 16) & 0xFF, (signal >> 8) & 0xFF, signal & 0xFF]
+            pulseSYNC()  # Pulse the SYNC pin to prepare the DAC
+            spi_dac.xfer2(data_bytes)  # Send 4 bytes to the DAC
+            
+            file.write(f"Outputted 32-bit signal: {bin(signal)}\n")
+            # print(f"Outputted 32-bit signal: {bin(signal)}")
 
 def startConversionAndDelay():
     """Handles ADC conversion, delay, and DAC output"""
