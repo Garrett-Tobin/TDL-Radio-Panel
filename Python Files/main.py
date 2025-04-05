@@ -1,164 +1,199 @@
-# Import Libraries
-import lgpio
+import spidev
 import tkinter as tk
 import time
-
-# Import Pin Numbers
 import PinNumbers
-
-# Import Functions
 import functions
+import lgpio
 
+# Global Variables
 initial_state = True
-delayTime = 0
+output_filename = "captured_output.txt"
+SPI_BUS = 0  # SPI bus number
+SPI_DEVICE_ADC = 0  # ADC on CE0 (GPIO 9 (MISO)) originally GPIO 22
+SPI_DEVICE_DAC = 1  # DAC on CE1 (GPIO 10 (MOSI)) originally GPIO 16
 captureTime = 0
+delayTime = 0
+captured_data = []  # Store 32-bit signals
+CYCLE = 1/(50e6)
+
+# GPIO Setup
+try:
+    chip = lgpio.gpiochip_open(0)  # Open GPIO chip for pin control
+except Exception as e:
+    print(f"Error initializing GPIO chip: {e}")
+    exit()
+
+# Functions for handling PCB Devices
+def reset_devices():
+    """Resets the ADC (ADS8681W) and DAC (DAC82001) using RST and RESET pins"""
+    try:
+        print("Resetting ADC (ADS8681W) and DAC (DAC82001)...")
+        # Set both reset pins LOW
+        lgpio.gpio_write(chip, PinNumbers.RST, 0)  # Reset ADC
+        lgpio.gpio_write(chip, PinNumbers.RESET, 0)  # Reset DAC
+        time.sleep(0.1)  # 10ms delay (ensure proper reset)
+
+        # Set both reset pins HIGH
+        lgpio.gpio_write(chip, PinNumbers.RST, 1)
+        lgpio.gpio_write(chip, PinNumbers.RESET, 1)
+        time.sleep(0.1)  # Wait after reset
+
+        print("Reset complete. Initializing SPI...")
+    except Exception as e:
+        print(f"Error resetting devices: {e}")
+
+reset_devices()
+
+# Initialize SPI
+try:
+    spi_adc = spidev.SpiDev()
+    spi_dac = spidev.SpiDev()
+    spi_adc.open(SPI_BUS, SPI_DEVICE_ADC)
+    spi_dac.open(SPI_BUS, SPI_DEVICE_DAC)
+    spi_adc.max_speed_hz = 50000000  # 50 MHz per ADS8681W datasheet
+    spi_dac.max_speed_hz = 50000000  # 50 MHz per DAC82001 datasheet
+    spi_adc.mode = 0b00  # Mode for ADS8681W
+    spi_dac.mode = 0b00  # Mode for DAC82001
+except Exception as e:
+    print(f"Error initializing SPI devices: {e}")
+    exit()
+
+# Initialize Pins for ADC (ADS8681W) and DAC (DAC82001)
+try:
+    functions.setupPins(chip)
+except Exception as e:
+    print(f"Error setting up pins: {e}")
+
+# GUI Handlers
+def handleCaptureButton():
+    global captureTime
+    try:
+        captureTime = int(functions.grabCaptureTime(captureDisplay_lbl, captureTime_SpinBox))
+    except Exception as e:
+        print(f"Error handling capture time input: {e}")
 
 def handleDelayButton():
     global delayTime
-    delayTime = int(functions.grabDelayTime(delayDisplay_lbl, delayTime_SpinBox))
-    
-def handleCaptureButton():
-    global captureTime
-    captureTime = int(functions.grabCaptureTime(captureDisplay_lbl, captureTime_SpinBox))
-    
-def captureSignal():
-    # This function will simulate capturing the signal and store it with a timestamp
-    start_time = time.time() # Record Start Time
-    while time.time() - start_time < captureTime: # Run For a Given Duration
-        current_state = lgpio.gpio_read(chip, PinNumbers.SDO_O) # Read GPIO State
-        
-        timestamp = time.time()- start_time
-        # print(f"Time {timestamp:.3f}s state: {current_state}")
-        captured_data.append((timestamp, current_state)) # Append the Data to a list
-        
-        time.sleep(0.00001)
-    print(f"Captured Signal for {captureTime}s")
+    try:
+        delayTime = int(functions.grabDelayTime(delayDisplay_lbl, delayTime_SpinBox))
+    except Exception as e:
+        print(f"Error handling delay time input: {e}")
+
+def startConversion():
+    """Activates CONVST for ADC and waits for RVS pin to signal ready data"""
+    try:
+        # Activate CONVST to start ADC conversion
+        lgpio.gpio_write(chip, PinNumbers.CONVST, 1)
+        time.sleep(CYCLE)  # Small delay to allow ADC to start conversion
+        lgpio.gpio_write(chip, PinNumbers.CONVST, 0)  # Deactivate CONVST to finish start
+
+        # Wait for RVS pin to go low (indicating ADC data is ready)
+        while lgpio.gpio_read(chip, PinNumbers.RVS) == 0:
+            time.sleep(CYCLE)  # Small delay before checking again
+        # print("ADC data is ready")
+    except Exception as e:
+        print(f"Error during ADC conversion: {e}")
+
+def pulseSYNC():
+    """Pulses the SYNC pin to prepare DAC for receiving data"""
+    try:
+        lgpio.gpio_write(chip, PinNumbers.SYNC, 1)  # Set SYNC high
+        time.sleep(CYCLE)  # Small delay
+        lgpio.gpio_write(chip, PinNumbers.SYNC, 0)  # Set SYNC low
+    except Exception as e:
+        print(f"Error pulsing SYNC pin: {e}")
+
+def readADC():
+    """Reads a 32-bit signal from the ADC (ADS8681W)"""
+    try:
+        start_time = time.time()
+        with open(output_filename, "w") as file:  # Open output file in write mode
+            while time.time() - start_time < captureTime:
+                startConversion()  # Start ADC conversion
+
+                adc_data = spi_adc.xfer2([0x00, 0x00, 0x00, 0x00])  # 4 bytes (32 bits)
+
+                result = (adc_data[0] << 24) | (adc_data[1] << 16) | (adc_data[2] << 8) | adc_data[3]
+                captured_data.append(result)  # Store captured data
+
+                file.write(f"Captured 32-bit ADC: {bin(result)}\n")
+                # print(f"Captured 32-bit ADC: {bin(result)}")
+    except Exception as e:
+        print(f"Error reading ADC data: {e}")
 
 def outputSignal():
-    replay_start_time = time.time()
-    for timestamp, state in captured_data:
-        # Wait until the correct replay time
-        while time.time() - replay_start_time < timestamp:
-            time.sleep(0.00001)
-            
-        # Output stored signal to LED
-        lgpio.gpio_write(chip, PinNumbers.SDIN, state)
-        state_str = "ON" if state else "OFF"
-        # print(f"Replayed: Time {timestamp:.3f}s | LED {state_str}")
+    """Outputs the stored 32-bit signal to DAC (DAC82001)"""
+    try:
+        if not captured_data:
+            print("No data to output!")
+            return
 
-def startDelay():
-    if delayTime > 0:
-        captureSignal()
-        time.sleep(delayTime)
-        print(f"Delayed for {delayTime}s")
-        outputSignal()
-    print("END DELAY")
+        with open(output_filename, "a") as file:
+            for signal in captured_data:
+                captured_data.pop(0)  # Retrieve and remove the oldest stored signal
 
+                dac_value = (signal >> 16) & 0xFFFF  # Extract the 16 most significant bits (Data Bits)
 
-ADC_ON = False
-# list to store captured data (timestamp, signal state)
-captured_data = []
+                data_bytes = [0x08, (dac_value >> 8) & 0xFF, dac_value & 0xFF]
+                # file.write(f"Outputted to DAC82001: {data_bytes}\n")
 
+                pulseSYNC()  # Pulse the SYNC pin to prepare the DAC
+                spi_dac.xfer2(data_bytes)  # Send 4 bytes to the DAC
+
+                file.write(f"Outputted to DAC82001: {dac_value}\n")
+    except Exception as e:
+        print(f"Error outputting signal to DAC: {e}")
+
+def startConversionAndDelay():
+    """Handles ADC conversion, delay, and DAC output"""
+    try:
+        print(f"Starting Delay")
+        readADC()  # Read from ADC
+        if delayTime > 0:
+            time.sleep(delayTime)  # Add delay if set
+            print(f"Delayed for {delayTime}s")
+        outputSignal()  # Output to DAC
+        print("Conversion and output complete")
+    except Exception as e:
+        print(f"Error during conversion and delay: {e}")
+
+# GUI Setup
 try:
-    TDLwindow = tk.Tk()  # Set up the main window
-
-    # Set up all GPIO Pins as input or output
-    chip = lgpio.gpiochip_open(0)  # Open the GPIO chip
-    functions.setupPins(chip)
-
-    # Setup and Configure the Tkinter Window
+    TDLwindow = tk.Tk()
     functions.createTDLWindow(TDLwindow)
 
-    # Create Title Label
-    title_lbl = tk.Label(TDLwindow, text="T.D.L-Radio-Panel P.O.C.", font=("Times New Roman", 24))
-    title_lbl.pack(pady=20)
+    tk.Label(TDLwindow, text="ADC-DAC SPI Interface", font=("Times New Roman", 24)).pack(pady=20)
 
-    # Delay Time Capture Label
-    delayCapture_lbl = tk.Label(TDLwindow, text="Input Desired Delay Time", font=("Times New Roman", 16))
-    delayCapture_lbl.pack(pady=10)
-
-    # SpinBox to Input Delay Time
-    delayTime_SpinBox = tk.Spinbox(TDLwindow, from_=1, to_=20, width=5, font=("Times New Roman", 12))
-    delayTime_SpinBox.pack(pady=5)
-
-    # Capture Time Capture Label
-    captureTimeCapture_lbl = tk.Label(TDLwindow, text="Input Desired Signal Capture Time", font=("Times New Roman", 16))
-    captureTimeCapture_lbl.pack(pady=10)
-
-    # SpinBox to Input Capture Time
+    tk.Label(TDLwindow, text="Input Desired Capture Time", font=("Times New Roman", 16)).pack(pady=10)
     captureTime_SpinBox = tk.Spinbox(TDLwindow, from_=1, to_=5, width=5, font=("Times New Roman", 12))
     captureTime_SpinBox.pack(pady=5)
 
-    # Button to Set Delay Time
-    setDelayTime_btn = tk.Button(TDLwindow, text="Set Desired Delay Time", font=("Times New Roman", 16), command=handleDelayButton)
-    setDelayTime_btn.pack(pady=10)
-    
-    # Button to Set Capture Time
-    setCaptureTime_btn = tk.Button(TDLwindow, text="Set Desired Capture Time", font=("Times New Roman", 16), command=handleCaptureButton)
-    setCaptureTime_btn.pack(pady=10)
+    tk.Label(TDLwindow, text="Input Desired Delay Time", font=("Times New Roman", 16)).pack(pady=10)
+    delayTime_SpinBox = tk.Spinbox(TDLwindow, from_=1, to_=20, width=5, font=("Times New Roman", 12))
+    delayTime_SpinBox.pack(pady=5)
 
-    # Button to start Delay
-    startDelay_btn = tk.Button(TDLwindow, text="Start Capture and Delay", font=("Times New Roman", 16), command=startDelay)
-    startDelay_btn.pack(pady=20)
-    
-    # Label to Display Current Delay Time
-    delayDisplay_lbl = tk.Label(TDLwindow, text="Current Delay Time: 0", font=("Times New Roman", 16))
-    delayDisplay_lbl.pack(pady=3)
+    tk.Button(TDLwindow, text="Set Capture Time", font=("Times New Roman", 16), command=handleCaptureButton).pack(pady=10)
+    tk.Button(TDLwindow, text="Set Delay Time", font=("Times New Roman", 16), command=handleDelayButton).pack(pady=10)
+    tk.Button(TDLwindow, text="Start Capture", font=("Times New Roman", 16), command=startConversionAndDelay).pack(pady=20)
 
-    # Label to Display Current Capture Time
     captureDisplay_lbl = tk.Label(TDLwindow, text="Current Capture Time: 0", font=("Times New Roman", 16))
     captureDisplay_lbl.pack(pady=3)
 
-    # On Indicator (Just for Test Purposes Right Now)
-    indicator_lbl = tk.Label(TDLwindow, text="Off", font=("Times New Roman", 16), bg="red", fg="white")
-    indicator_lbl.pack(side="right", padx=20)
+    delayDisplay_lbl = tk.Label(TDLwindow, text="Current Delay Time: 0", font=("Times New Roman", 16))
+    delayDisplay_lbl.pack(pady=3)
 
-    # Create Quit Button
     quit_btn = tk.Button(TDLwindow, text="Quit Program", command=TDLwindow.destroy)
     quit_btn.pack(side="bottom", pady=20)
 
-    # Run the interface in a loop
-    TDLwindow.update_idletasks()
-    TDLwindow.update()
+    TDLwindow.mainloop()
+except Exception as e:
+    print(f"Error initializing GUI: {e}")
 
-    # Infinite loop that runs until the user closes the program
-    while TDLwindow.winfo_exists():
-        try:
-            TDLwindow.update_idletasks()  # Update Tkinter tasks
-            TDLwindow.update()  # Refresh the window
-            
-            while initial_state:
-                # Update TRI-STATE on oscillator (not sure about this one)
-                lgpio.gpio_write(chip, PinNumbers.TRI_STATE, 1) # Check if this needs to be set to high or low
-                # Update RST Pin if need to Reset the ADC (Set to Active Low to reset pin)
-                lgpio.gpio_write(chip, PinNumbers.RST, 0)
-                # Send register instructions to ADC using SDI pin (Not sure what this entails)   
-                
-                initial_state = False
-
-            # Indicate to ADC to start converting using CONVST (Done after interface button is pressed)
-
-            # Read RVS pin (When high signal is being read and when Low samples are being put together)
-            # Have a while loop that runs until samples are ready to be read
-            
-            # When samples are prepared read them and capture them from SDO-O
-
-            # Delay the program 
-
-            # Update RESET to reset DAC if needed
-
-            # Send SYNC signal to prepare DAC for conversion to analog
-
-            # Send captured digital signal to SDIN
-            
-            time.sleep(0.1)  # Prevents excessive CPU usage
-
-        except tk.TclError:
-            # Catches when the window is closed and breaks the loop
-            print("Program closed. Cleaning up...")
-            break
-
-finally:
-    lgpio.gpio_write(chip, PinNumbers.TRI_STATE, 0)
-    lgpio.gpiochip_close(chip)  # Close the GPIO chip
-    print("GPIO chip closed. Exiting program.")
+# Cleanup
+try:
+    spi_adc.close()
+    spi_dac.close()
+    lgpio.gpiochip_close(chip)  # Close GPIO chip
+    print("SPI and GPIO closed. Exiting program.")
+except Exception as e:
+    print(f"Error during cleanup: {e}")
